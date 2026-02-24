@@ -16,3 +16,7 @@ kernel/kernel
 user/usys.S
 .gdbinit
 TAGS
+
+# Local experiments
+user/padre_hijo_prueba.c
+user/pipes.c
