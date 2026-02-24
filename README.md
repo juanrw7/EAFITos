@@ -121,11 +121,11 @@ EAFITos> salir
 
 Este repositorio fue entregado con xv6 en conjunto para una mayor facilidad al momento de compilarlo y usar el programa. Si se prefiere tener unicamente el documento .c y el makefile del xv6 que lo compila se tiene esta opcion.
 
-**Enlace al repositorio:**
+**Enlace al repositorio:** https://github.com/juanrw7/eafitos_noXV6
 
 
 ## Proyecto hecho para linux
 
 Antes de realizar este proyecto adaptado para xv6 se realizo en linux. De este proyecto hecho para linux se toma la gran mayoria de funciones y funcionalidad del proyecto.
 
-**Enlace al repositorio:**
+**Enlace al repositorio:** https://github.com/juanrw7/EAFITos_linux
