@@ -484,3 +484,35 @@ ismapped(pagetable_t pagetable, uint64 va)
   }
   return 0;
 }
+
+//modificado
+static void
+vmprint_level(pagetable_t pagetable, int level)
+{
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){
+      uint64 pa = PTE2PA(pte);
+      for(int j = 0; j < level; j++)
+        printf(" ..");
+      printf("%d: pte 0x%lx pa 0x%lx", i, pte, pa);
+
+      if(pte & PTE_R) printf(" R");
+      if(pte & PTE_W) printf(" W");
+      if(pte & PTE_X) printf(" X");
+      if(pte & PTE_U) printf(" U");
+      printf("\n");
+
+      if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
+        vmprint_level((pagetable_t)pa, level + 1);
+      }
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  vmprint_level(pagetable, 1);
+}

@@ -20,3 +20,9 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+//modificado
+#define SYS_hello   22
+#define SYS_trace   23
+#define SYS_dumpvm  24
+#define SYS_map_ro  25
+#define SYS_shmem   26

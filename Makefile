@@ -147,9 +147,15 @@ UPROGS=\
 	$U/_dorphan\
 	$U/_pipes\
 	$U/_eafitos\
+	$U/_smhtest\
+	$U/_thello\
+	$U/_ttrace\
+	$U/_tdumpvm\
+	$U/_tmemro\
+	$U/_tuargs\
 
-fs.img: mkfs/mkfs README $(UPROGS)
-	mkfs/mkfs fs.img README $(UPROGS)
+fs.img: mkfs/mkfs README.md $(UPROGS)
+	mkfs/mkfs fs.img README.md $(UPROGS)
 
 -include kernel/*.d user/*.d
 

@@ -107,3 +107,93 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//modificado
+uint64
+sys_shmem(void)
+{
+  int pid;
+  uint64 va;
+  struct proc *p;
+  struct proc *other;
+  char *mem;
+  uint64 pa;
+
+  argint(0, &pid);
+  argaddr(1, &va);
+
+  p = myproc();
+  other = findproc(pid);
+  if(other == 0)
+    return -1;
+
+  mem = kalloc();
+  if(mem == 0)
+    return -1;
+
+  memset(mem, 0, PGSIZE);
+  pa = (uint64)mem;
+
+  if(mappages(p->pagetable, va, PGSIZE, pa, PTE_R | PTE_W | PTE_U) != 0){
+    kfree(mem);
+    return -1;
+  }
+
+  if(mappages(other->pagetable, va, PGSIZE, pa, PTE_R | PTE_W | PTE_U) != 0){
+    uvmunmap(p->pagetable, va, 1, 0);
+    kfree(mem);
+    return -1;
+  }
+
+  return va;
+}
+
+uint64
+sys_hello(void)
+{
+  return 42;
+}
+
+uint64
+sys_trace(void)
+{
+  int mask;
+  argint(0, &mask);
+  myproc()->trace_mask = mask;
+  return 0;
+}
+
+uint64
+sys_dumpvm(void)
+{
+  vmprint(myproc()->pagetable);
+  return 0;
+}
+
+uint64
+sys_map_ro(void)
+{
+  uint64 va;
+  char *mem;
+  char msg[] = "mensaje solo lectura";
+
+  argaddr(0, &va);
+  va = PGROUNDDOWN(va);
+
+  if(ismapped(myproc()->pagetable, va))
+    return -1;
+
+  mem = kalloc();
+  if(mem == 0)
+    return -1;
+
+  memset(mem, 0, PGSIZE);
+  safestrcpy(mem, msg, sizeof(msg));
+
+  if(mappages(myproc()->pagetable, va, PGSIZE, (uint64)mem, PTE_R | PTE_U) != 0){
+    kfree(mem);
+    return -1;
+  }
+
+  return 0;
+}

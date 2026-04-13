@@ -101,6 +101,42 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+//modificado
+extern uint64 sys_shmem(void);
+extern uint64 sys_hello(void);
+extern uint64 sys_trace(void);
+extern uint64 sys_dumpvm(void);
+extern uint64 sys_map_ro(void);
+
+//modificado y nuevo
+static char *syscall_names[] = {
+[SYS_fork]   "fork",
+[SYS_exit]   "exit",
+[SYS_wait]   "wait",
+[SYS_pipe]   "pipe",
+[SYS_read]   "read",
+[SYS_kill]   "kill",
+[SYS_exec]   "exec",
+[SYS_fstat]  "fstat",
+[SYS_chdir]  "chdir",
+[SYS_dup]    "dup",
+[SYS_getpid] "getpid",
+[SYS_sbrk]   "sbrk",
+[SYS_pause]  "pause",
+[SYS_uptime] "uptime",
+[SYS_open]   "open",
+[SYS_write]  "write",
+[SYS_mknod]  "mknod",
+[SYS_unlink] "unlink",
+[SYS_link]   "link",
+[SYS_mkdir]  "mkdir",
+[SYS_close]  "close",
+[SYS_hello]  "hello",
+[SYS_trace]  "trace",
+[SYS_dumpvm] "dumpvm",
+[SYS_map_ro] "map_ro",
+[SYS_shmem]  "shmem",
+};
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -126,6 +162,12 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+//modificado
+[SYS_hello]   sys_hello,
+[SYS_trace]   sys_trace,
+[SYS_dumpvm]  sys_dumpvm,
+[SYS_map_ro]  sys_map_ro,
+[SYS_shmem]   sys_shmem,
 };
 
 void
@@ -135,13 +177,23 @@ syscall(void)
   struct proc *p = myproc();
 
   num = p->trapframe->a7;
+
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    // Use num to lookup the system call function for num, call it,
-    // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
+    uint64 a0 = p->trapframe->a0;
+    uint64 a1 = p->trapframe->a1;
+    uint64 a2 = p->trapframe->a2;
+
+    uint64 ret = syscalls[num]();
+    p->trapframe->a0 = ret;
+
+    if(p->trace_mask & (1 << num)) {
+      printf("trace: pid=%d name=%s syscall=%d (%s) a0=0x%lx a1=0x%lx a2=0x%lx ret=0x%lx\n",
+             p->pid, p->name, num, syscall_names[num],
+             a0, a1, a2, ret);
+    }
   } else {
     printf("%d %s: unknown sys call %d\n",
-            p->pid, p->name, num);
+           p->pid, p->name, num);
     p->trapframe->a0 = -1;
   }
 }

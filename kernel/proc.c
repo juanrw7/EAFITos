@@ -125,6 +125,9 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  //modificado
+  p->trace_mask = 0;
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -169,6 +172,9 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  //modificado
+  p->trace_mask = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -210,6 +216,18 @@ proc_pagetable(struct proc *p)
 void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
+  pte_t *pte;
+  uint64 shmemva = 0x60000000;
+  uint64 rova = 0x50000000;
+
+  pte = walk(pagetable, shmemva, 0);
+  if(pte && (*pte & PTE_V))
+    uvmunmap(pagetable, shmemva, 1, 0);
+
+  pte = walk(pagetable, rova, 0);
+  if(pte && (*pte & PTE_V))
+    uvmunmap(pagetable, rova, 1, 0);
+
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
@@ -278,6 +296,9 @@ kfork(void)
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
+
+  //modificado
+  np->trace_mask = p->trace_mask;
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
@@ -687,4 +708,20 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+struct proc*
+findproc(int pid)
+{
+  struct proc *p;
+
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->state != UNUSED && p->pid == pid){
+      release(&p->lock);
+      return p;
+    }
+    release(&p->lock);
+  }
+  return 0;
 }

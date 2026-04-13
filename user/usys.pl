@@ -42,3 +42,8 @@ entry("getpid");
 entry("sbrk");
 entry("pause");
 entry("uptime");
+entry("hello");
+entry("trace");
+entry("dumpvm");
+entry("map_ro");
+entry("shmem");

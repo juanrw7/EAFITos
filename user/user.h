@@ -24,6 +24,12 @@ int getpid(void);
 char* sys_sbrk(int,int);
 int pause(int);
 int uptime(void);
+//modificado
+int hello(void);
+int trace(int);
+int dumpvm(void);
+int map_ro(void *);
+int shmem(int, void*);
 
 // ulib.c
 int stat(const char*, struct stat*);

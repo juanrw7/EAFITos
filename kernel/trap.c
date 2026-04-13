@@ -65,12 +65,23 @@ usertrap(void)
     // so enable only now that we're done with those registers.
     intr_on();
 
+    //modificado
+    //printf("[ecall] pid=%d sepc=0x%lx syscall=%ld\n",
+      // p->pid, r_sepc(), p->trapframe->a7);
+
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
   } else if((r_scause() == 15 || r_scause() == 13) &&
             vmfault(p->pagetable, r_stval(), (r_scause() == 13)? 1 : 0) != 0) {
     // page fault on lazily-allocated page
+
+  //modificado
+  } else if(r_scause() == 15) {
+  printf("store page fault: pid=%d scause=0x%lx stval=0x%lx sepc=0x%lx\n",
+         p->pid, r_scause(), r_stval(), r_sepc());
+  setkilled(p);
+
   } else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
