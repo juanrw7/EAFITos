@@ -81,6 +81,11 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct vregion {
+  uint64 start;
+  int size;
+};
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -94,6 +99,9 @@ struct proc {
 
   //modificado
   int trace_mask;
+  int page_faults;
+  int has_region;
+  struct vregion region;
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

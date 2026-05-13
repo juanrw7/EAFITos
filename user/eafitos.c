@@ -191,6 +191,24 @@ static int getcwd_xv6(char *out, int outsz) {
 // Comandos
 typedef int (*cmd_fn)(int argc, char **argv);
 
+static int run_program(char *prog, char **argv) {
+  int pid = fork();
+
+  if (pid < 0) {
+    printf("No se pudo crear el proceso para %s\n", prog);
+    return 0;
+  }
+
+  if (pid == 0) {
+    exec(prog, argv);
+    printf("No se pudo ejecutar %s\n", prog);
+    exit(1);
+  }
+
+  wait(0);
+  return 0;
+}
+
 static void help_usage(const char *cmd) {
   if (streq(cmd, "listar")) {
     printf("Uso: listar\n  Lista el contenido del directorio actual.\n");
@@ -213,6 +231,21 @@ static void help_usage(const char *cmd) {
     printf("Uso: usuario\n  Muestra info del proceso (PID + heap end).\n");
   } else if (streq(cmd, "directorio")) {
     printf("Uso: directorio\n  Muestra el directorio actual (reconstruido desde . y ..).\n");
+    } else if (streq(cmd, "pf")) {
+    printf("Uso: pf <readlow|writelow|readhigh|writehigh>\n");
+    printf("  Ejecuta tpf para observar page faults.\n");
+  } else if (streq(cmd, "sbrkpf")) {
+    printf("Uso: sbrkpf\n");
+    printf("  Ejecuta tsbrkpf para mostrar el fallo tras sbrk lazy inicial.\n");
+  } else if (streq(cmd, "sbrklazy")) {
+    printf("Uso: sbrklazy\n");
+    printf("  Ejecuta tsbrklazy para mostrar lazy allocation real.\n");
+  } else if (streq(cmd, "lazy")) {
+    printf("Uso: lazy\n");
+    printf("  Ejecuta tlazy para comparar faults secuenciales y dispersos.\n");
+  } else if (streq(cmd, "mmapsim")) {
+    printf("Uso: mmapsim\n");
+    printf("  Ejecuta tmmap_sim para simular mmap bajo demanda.\n");
   } else {
     printf("Comando desconocido. Usa: ayuda\n");
   }
@@ -220,6 +253,11 @@ static void help_usage(const char *cmd) {
 
 static int cmd_ayuda(int argc, char **argv);
 static int cmd_salir(int argc, char **argv);
+static int cmd_pf(int argc, char **argv);
+static int cmd_sbrkpf(int argc, char **argv);
+static int cmd_sbrklazy(int argc, char **argv);
+static int cmd_lazy(int argc, char **argv);
+static int cmd_mmapsim(int argc, char **argv);
 
 static int cmd_listar(int argc, char **argv) {
   (void)argc; (void)argv;
@@ -375,6 +413,60 @@ static int cmd_directorio(int argc, char **argv) {
   return 0;
 }
 
+static int cmd_pf(int argc, char **argv) {
+  if (argc != 2) {
+    help_usage("pf");
+    return 0;
+  }
+
+  char *child_argv[3];
+  child_argv[0] = "tpf";
+  child_argv[1] = argv[1];
+  child_argv[2] = 0;
+
+  return run_program("tpf", child_argv);
+}
+
+static int cmd_sbrkpf(int argc, char **argv) {
+  (void)argc; (void)argv;
+
+  char *child_argv[2];
+  child_argv[0] = "tsbrkpf";
+  child_argv[1] = 0;
+
+  return run_program("tsbrkpf", child_argv);
+}
+
+static int cmd_sbrklazy(int argc, char **argv) {
+  (void)argc; (void)argv;
+
+  char *child_argv[2];
+  child_argv[0] = "tsbrklazy";
+  child_argv[1] = 0;
+
+  return run_program("tsbrklazy", child_argv);
+}
+
+static int cmd_lazy(int argc, char **argv) {
+  (void)argc; (void)argv;
+
+  char *child_argv[2];
+  child_argv[0] = "tlazy";
+  child_argv[1] = 0;
+
+  return run_program("tlazy", child_argv);
+}
+
+static int cmd_mmapsim(int argc, char **argv) {
+  (void)argc; (void)argv;
+
+  char *child_argv[2];
+  child_argv[0] = "tmmap_sim";
+  child_argv[1] = 0;
+
+  return run_program("tmmap_sim", child_argv);
+}
+
 static int cmd_ayuda(int argc, char **argv) {
   if (argc == 1) {
     printf("Comandos disponibles:\n");
@@ -387,6 +479,11 @@ static int cmd_ayuda(int argc, char **argv) {
     printf("  limpiar                - Limpia la pantalla\n");
     printf("  usuario                - Info del proceso (PID + heap)\n");
     printf("  directorio             - Directorio actual (reconstruido)\n");
+    printf("  pf <modo>              - Ejecuta tpf para observar page faults\n");
+    printf("  sbrkpf                 - Demuestra acceso a memoria reservada con sbrk bajo lazy allocation\n");
+    printf("  sbrklazy               - Prueba lazy allocation real con sbrk\n");
+    printf("  lazy                   - Compara faults secuencial vs disperso\n");
+    printf("  mmapsim                - Simula mmap bajo demanda con mapzero\n");
     printf("  salir                  - Termina la shell\n");
     return 0;
   }
@@ -419,6 +516,11 @@ static struct CommandEntry COMMANDS[] = {
   {"limpiar", cmd_limpiar},
   {"usuario", cmd_usuario},
   {"directorio", cmd_directorio},
+  {"pf", cmd_pf},
+  {"sbrkpf", cmd_sbrkpf},
+  {"sbrklazy", cmd_sbrklazy},
+  {"lazy", cmd_lazy},
+  {"mmapsim", cmd_mmapsim},
   {"salir", cmd_salir},
 };
 

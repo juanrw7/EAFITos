@@ -30,6 +30,9 @@ int trace(int);
 int dumpvm(void);
 int map_ro(void *);
 int shmem(int, void*);
+int getpfaults(void);
+int resetpfaults(void);
+uint64 mapzero(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

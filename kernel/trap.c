@@ -70,19 +70,52 @@ usertrap(void)
       // p->pid, r_sepc(), p->trapframe->a7);
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
-    // ok
-  } else if((r_scause() == 15 || r_scause() == 13) &&
-            vmfault(p->pagetable, r_stval(), (r_scause() == 13)? 1 : 0) != 0) {
-    // page fault on lazily-allocated page
+} else if((which_dev = devintr()) != 0){
+  // ok
+} else if(r_scause() == 13 || r_scause() == 15) {
+  uint64 badva = r_stval();
+  uint64 va = PGROUNDDOWN(badva);
+  int sc = r_scause();
 
-  //modificado
-  } else if(r_scause() == 15) {
-  printf("store page fault: pid=%d scause=0x%lx stval=0x%lx sepc=0x%lx\n",
-         p->pid, r_scause(), r_stval(), r_sepc());
-  setkilled(p);
+  if(p->has_region &&
+     badva >= p->region.start &&
+     badva < p->region.start + p->region.size) {
 
+    if(ismapped(p->pagetable, va)) {
+      printf("page fault: pid=%d scause=%d stval=0x%lx sepc=0x%lx\n",
+             p->pid, sc, badva, r_sepc());
+      setkilled(p);
+    } else {
+      char *mem = kalloc();
+      if(mem == 0){
+        printf("page fault: pid=%d scause=%d stval=0x%lx sepc=0x%lx\n",
+               p->pid, sc, badva, r_sepc());
+        setkilled(p);
+      } else {
+        memset(mem, 'A', PGSIZE);
+        if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, PTE_R | PTE_W | PTE_U) != 0){
+          kfree(mem);
+          printf("page fault: pid=%d scause=%d stval=0x%lx sepc=0x%lx\n",
+                 p->pid, sc, badva, r_sepc());
+          setkilled(p);
+        } else {
+          p->page_faults++;
+          printf("mapzero alloc: pid=%d scause=%d stval=0x%lx\n",
+                 p->pid, sc, badva);
+        }
+      }
+    }
+
+  } else if(vmfault(p->pagetable, badva, sc == 13) != 0){
+    p->page_faults++;
+    printf("lazy alloc: pid=%d scause=%d stval=0x%lx\n",
+           p->pid, sc, badva);
   } else {
+    printf("page fault: pid=%d scause=%d stval=0x%lx sepc=0x%lx\n",
+           p->pid, sc, badva, r_sepc());
+    setkilled(p);
+  }
+} else {
     printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
     printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     setkilled(p);

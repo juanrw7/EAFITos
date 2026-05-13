@@ -127,6 +127,10 @@ found:
 
   //modificado
   p->trace_mask = 0;
+  p->page_faults = 0;
+  p->has_region = 0;
+  p->region.start = 0;
+  p->region.size = 0; 
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -161,8 +165,13 @@ freeproc(struct proc *p)
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
-  if(p->pagetable)
+
+  if(p->pagetable){
+    if(p->has_region)
+      uvmunmap(p->pagetable, p->region.start, p->region.size / PGSIZE, 1);
+
     proc_freepagetable(p->pagetable, p->sz);
+  }
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -173,8 +182,12 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
 
-  //modificado
+//modificaddo
   p->trace_mask = 0;
+  p->page_faults = 0;
+  p->has_region = 0;
+  p->region.start = 0;
+  p->region.size = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -299,6 +312,9 @@ kfork(void)
 
   //modificado
   np->trace_mask = p->trace_mask;
+  np->page_faults = p->page_faults;
+  np->has_region = p->has_region;
+  np->region = p->region;
 
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;

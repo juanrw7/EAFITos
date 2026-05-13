@@ -47,3 +47,6 @@ entry("trace");
 entry("dumpvm");
 entry("map_ro");
 entry("shmem");
+entry("getpfaults");
+entry("resetpfaults");
+entry("mapzero");

@@ -107,6 +107,9 @@ extern uint64 sys_hello(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_dumpvm(void);
 extern uint64 sys_map_ro(void);
+extern uint64 sys_getpfaults(void);
+extern uint64 sys_resetpfaults(void);
+extern uint64 sys_mapzero(void);
 
 //modificado y nuevo
 static char *syscall_names[] = {
@@ -136,6 +139,9 @@ static char *syscall_names[] = {
 [SYS_dumpvm] "dumpvm",
 [SYS_map_ro] "map_ro",
 [SYS_shmem]  "shmem",
+[SYS_getpfaults]  "getpfaults",
+[SYS_resetpfaults] "resetpfaults",
+[SYS_mapzero] "mapzero",
 };
 
 // An array mapping syscall numbers from syscall.h
@@ -168,6 +174,9 @@ static uint64 (*syscalls[])(void) = {
 [SYS_dumpvm]  sys_dumpvm,
 [SYS_map_ro]  sys_map_ro,
 [SYS_shmem]   sys_shmem,
+[SYS_getpfaults]   sys_getpfaults,
+[SYS_resetpfaults] sys_resetpfaults,
+[SYS_mapzero]  sys_mapzero,
 };
 
 void

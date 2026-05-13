@@ -26,3 +26,6 @@
 #define SYS_dumpvm  24
 #define SYS_map_ro  25
 #define SYS_shmem   26
+#define SYS_getpfaults 27
+#define SYS_resetpfaults 28
+#define SYS_mapzero 29

@@ -42,25 +42,24 @@ sys_sbrk(void)
   uint64 addr;
   int t;
   int n;
+  struct proc *p = myproc();
 
   argint(0, &n);
   argint(1, &t);
-  addr = myproc()->sz;
+  (void)t;   // se mantiene por compatibilidad con tu ABI actual
+  addr = p->sz;
 
-  if(t == SBRK_EAGER || n < 0) {
-    if(growproc(n) < 0) {
+  if(n < 0){
+    if(growproc(n) < 0)
       return -1;
-    }
   } else {
-    // Lazily allocate memory for this process: increase its memory
-    // size but don't allocate memory. If the processes uses the
-    // memory, vmfault() will allocate it.
     if(addr + n < addr)
       return -1;
     if(addr + n > TRAPFRAME)
       return -1;
-    myproc()->sz += n;
+    p->sz += n;
   }
+
   return addr;
 }
 
@@ -196,4 +195,47 @@ sys_map_ro(void)
   }
 
   return 0;
+}
+
+uint64
+sys_getpfaults(void)
+{
+  return myproc()->page_faults;
+}
+
+uint64
+sys_resetpfaults(void)
+{
+  myproc()->page_faults = 0;
+  return 0;
+}
+
+uint64
+sys_mapzero(void)
+{
+  int size;
+  struct proc *p = myproc();
+  uint64 start = 0x70000000;
+
+  argint(0, &size);
+
+  if(size <= 0)
+    return -1;
+
+  size = PGROUNDUP(size);
+
+  if(p->has_region)
+    return -1;
+
+  if(start + size < start)
+    return -1;
+
+  if(start + size >= TRAPFRAME)
+    return -1;
+
+  p->region.start = start;
+  p->region.size = size;
+  p->has_region = 1;
+
+  return start;
 }
