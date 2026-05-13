@@ -4,7 +4,8 @@
 #include "kernel/fs.h"
 #include "user/user.h"
 
-#define PROMPT "EAFITos> "
+#define DEFAULT_PROMPT "EAFITos"
+#define MAXPROMPT 64
 #define MAXLINE 256
 #define MAXARGS 32
 #define HIST_SIZE 10
@@ -13,6 +14,12 @@
 #define TICKS_PER_SEC_APPROX 10
 
 // -------------------- Utils --------------------
+static char prompt_text[MAXPROMPT] = DEFAULT_PROMPT;
+static char prompt_color[16] = "\033[1;36m";  
+static char color_reset[] = "\033[0m";
+static char color_error[] = "\033[1;31m";
+static char color_info[] = "\033[1;34m";
+
 static int streq(const char *a, const char *b) {
   return strcmp(a, b) == 0;
 }
@@ -54,6 +61,42 @@ static int safe_cat(char *dst, int dsz, const char *src) {
   memmove(dst + a, src, b);
   dst[a + b] = 0;
   return 1;
+}
+
+static void print_prompt(void) {
+  printf("%s%s>%s ", prompt_color, prompt_text, color_reset);
+}
+
+static void print_error(const char *msg) {
+  printf("%s%s%s\n", color_error, msg, color_reset);
+}
+
+static void print_info(const char *msg) {
+  printf("%s%s%s\n", color_info, msg, color_reset);
+}
+
+static void reset_ui(void) {
+  safe_copy(prompt_text, sizeof(prompt_text), DEFAULT_PROMPT);
+  safe_copy(prompt_color, sizeof(prompt_color), "\033[1;36m");
+}
+
+static int set_theme_color(const char *name) {
+  if (streq(name, "default") || streq(name, "cyan")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;36m");
+  } else if (streq(name, "verde")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;32m");
+  } else if (streq(name, "azul")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;34m");
+  } else if (streq(name, "rojo")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;31m");
+  } else if (streq(name, "amarillo")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;33m");
+  } else if (streq(name, "magenta")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;35m");
+  } else if (streq(name, "blanco")) {
+    return safe_copy(prompt_color, sizeof(prompt_color), "\033[1;37m");
+  }
+  return 0;
 }
 
 // Parser simple
@@ -246,6 +289,13 @@ static void help_usage(const char *cmd) {
   } else if (streq(cmd, "mmapsim")) {
     printf("Uso: mmapsim\n");
     printf("  Ejecuta tmmap_sim para simular mmap bajo demanda.\n");
+    } else if (streq(cmd, "prompt")) {
+    printf("Uso: prompt <texto>\n  Cambia el texto del prompt.\n");
+  } else if (streq(cmd, "tema")) {
+    printf("Uso: tema <default|verde|azul|rojo|amarillo|magenta|cyan|blanco>\n");
+    printf("  Cambia el color del prompt.\n");
+  } else if (streq(cmd, "resetui")) {
+    printf("Uso: resetui\n  Restaura prompt y color por defecto.\n");
   } else {
     printf("Comando desconocido. Usa: ayuda\n");
   }
@@ -258,6 +308,9 @@ static int cmd_sbrkpf(int argc, char **argv);
 static int cmd_sbrklazy(int argc, char **argv);
 static int cmd_lazy(int argc, char **argv);
 static int cmd_mmapsim(int argc, char **argv);
+static int cmd_prompt(int argc, char **argv);
+static int cmd_tema(int argc, char **argv);
+static int cmd_resetui(int argc, char **argv);
 
 static int cmd_listar(int argc, char **argv) {
   (void)argc; (void)argv;
@@ -484,6 +537,9 @@ static int cmd_ayuda(int argc, char **argv) {
     printf("  sbrklazy               - Prueba lazy allocation real con sbrk\n");
     printf("  lazy                   - Compara faults secuencial vs disperso\n");
     printf("  mmapsim                - Simula mmap bajo demanda con mapzero\n");
+    printf("  prompt <texto>         - Cambia el texto del prompt\n");
+    printf("  tema <color>           - Cambia el color del prompt\n");
+    printf("  resetui                - Restaura interfaz por defecto\n");
     printf("  salir                  - Termina la shell\n");
     return 0;
   }
@@ -506,6 +562,61 @@ struct CommandEntry {
   cmd_fn fn;
 };
 
+static int cmd_prompt(int argc, char **argv) {
+  char buf[MAXPROMPT];
+  int i;
+
+  if (argc < 2) {
+    help_usage("prompt");
+    return 0;
+  }
+
+  buf[0] = 0;
+  for (i = 1; i < argc; i++) {
+    if (i > 1) {
+      if (!safe_cat(buf, sizeof(buf), " ")) {
+        print_error("prompt: texto demasiado largo");
+        return 0;
+      }
+    }
+    if (!safe_cat(buf, sizeof(buf), argv[i])) {
+      print_error("prompt: texto demasiado largo");
+      return 0;
+    }
+  }
+
+  if (!safe_copy(prompt_text, sizeof(prompt_text), buf)) {
+    print_error("prompt: no se pudo cambiar");
+    return 0;
+  }
+
+  print_info("Prompt actualizado.");
+  return 0;
+}
+
+static int cmd_tema(int argc, char **argv) {
+  if (argc != 2) {
+    help_usage("tema");
+    return 0;
+  }
+
+  if (!set_theme_color(argv[1])) {
+    print_error("tema: opcion no valida");
+    help_usage("tema");
+    return 0;
+  }
+
+  print_info("Tema actualizado.");
+  return 0;
+}
+
+static int cmd_resetui(int argc, char **argv) {
+  (void)argc; (void)argv;
+  reset_ui();
+  print_info("Interfaz restaurada.");
+  return 0;
+}
+
 static struct CommandEntry COMMANDS[] = {
   {"listar", cmd_listar},
   {"leer", cmd_leer},
@@ -521,6 +632,9 @@ static struct CommandEntry COMMANDS[] = {
   {"sbrklazy", cmd_sbrklazy},
   {"lazy", cmd_lazy},
   {"mmapsim", cmd_mmapsim},
+  {"prompt", cmd_prompt},
+  {"tema", cmd_tema},
+  {"resetui", cmd_resetui},
   {"salir", cmd_salir},
 };
 
@@ -533,9 +647,24 @@ static int dispatch(int argc, char **argv) {
     }
   }
 
-  printf("Comando no reconocido: %s\n", argv[0]);
-  printf("Escribe 'ayuda' para ver comandos.\n");
+  printf("%sComando no reconocido:%s %s\n", color_error, color_reset, argv[0]);
+  printf("%sEscribe 'ayuda' para ver comandos.%s\n", color_info, color_reset);
   return 0;
+}
+
+static void print_banner(void) {
+  printf("\n");
+  printf("\n");
+  printf("%s", prompt_color); 
+
+  printf("███████╗ █████╗ ███████╗██╗████████╗ ██████╗ ███████╗\n");
+  printf("██╔════╝██╔══██╗██╔════╝██║╚══██╔══╝██╔═══██╗██╔════╝\n");
+  printf("█████╗  ███████║█████╗  ██║   ██║   ██║   ██║███████╗\n");
+  printf("██╔══╝  ██╔══██║██╔══╝  ██║   ██║   ██║   ██║╚════██║\n");
+  printf("███████╗██║  ██║██║     ██║   ██║   ╚██████╔╝███████║\n");
+  printf("╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝   ╚═╝    ╚═════╝ ╚══════╝\n");
+
+  printf("%s\n", color_reset);
 }
 
 //Main (REPL)
@@ -543,8 +672,10 @@ int main(void) {
   char line[MAXLINE];
   char *argv[MAXARGS];
 
+  print_banner();
+
   while (1) {
-    printf(PROMPT);
+    print_prompt();
 
     if (gets(line, sizeof(line)) == 0) {
       printf("\n");
